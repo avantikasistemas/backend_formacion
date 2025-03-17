@@ -8,7 +8,9 @@ class User:
         self.db = db
         self.tools = Tools()
         self.querys = Querys(self.db)
-        self.cuentas_validas = ['AGAMEZ', 'PPAJARO', 'JAMARTINEZ', 'VNIETO']
+        self.cuentas_validas = [
+            'AGAMEZ', 'PPAJARO', 'JAMARTINEZ', 'VNIETO', 'LLEDESMA'
+        ]
 
     # Función para loguear en el aplicativo
     def login(self, data):

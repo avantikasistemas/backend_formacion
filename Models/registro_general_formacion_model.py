@@ -46,7 +46,6 @@ class RegistroGeneralFormacionModel(BASE):
         self.ciudad = data['ciudad']
         self.evaluacion = data['evaluacion']
         self.seguimiento = data['seguimiento']
-        self.estado_formacion = data['estado_formacion']
         self.fecha_inicio = data['fecha_inicio']
         self.fecha_fin = data['fecha_fin']
-        self.estado = data['estado']
+        self.created_at = data['created_at']

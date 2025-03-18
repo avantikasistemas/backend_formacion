@@ -11,6 +11,7 @@ class Parametros:
         self.ROL = 2
         self.POSICION = 3
 
+    # Función para obtener los parametros iniciales
     def get_parametros(self):
         """ Api que realiza la consulta de los estados. """
 
@@ -73,6 +74,7 @@ class Parametros:
             print(f"Error al obtener información de tercero: {e}")
             raise CustomException("Error al obtener información de tercero.")
 
+    # Función para obtener los proveedores actuales
     def get_proveedores(self, data: dict):
         """ Api que realiza la consulta de los estados. """
 

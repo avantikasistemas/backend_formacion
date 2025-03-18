@@ -4,6 +4,7 @@ from Config.db import BASE, engine
 from Middleware.get_json import JSONMiddleware
 from Router.User import user_router
 from Router.Parametros import parametros_router
+from Router.Formacion import formacion_router
 
 app = FastAPI()
 app.title = "Avantika Formaciones"
@@ -18,5 +19,6 @@ app.add_middleware(
 )
 app.include_router(parametros_router)
 app.include_router(user_router)
+app.include_router(formacion_router)
 
 BASE.metadata.create_all(bind=engine)

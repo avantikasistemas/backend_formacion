@@ -1,11 +1,13 @@
 from Utils.tools import Tools, CustomException
-from sqlalchemy import text
+from sqlalchemy import text, or_
+from Models.registro_general_formacion_model import RegistroGeneralFormacionModel
 from Models.tipo_nivel_formacion_model import TipoNivelFormacionModel
 from Models.tipo_actividad_model import TipoActividadModel
 from Models.ciudades_formacion_model import CiudadesFormacionModel
 from Models.tipos_competencia_formacion_model import TiposCompetenciaFormacionModel
 from Models.macroprocesos_model import MacroprocesosModel
 from Models.tipo_modalidad_model import TipoModalidadModel
+from Models.tipo_estado_formacion_model import TipoEstadoFormacionModel
 
 class Querys:
 
@@ -41,10 +43,32 @@ class Querys:
                 
         except Exception as ex:
             print(str(ex))
+            raise CustomException("Error al intentar conectar con la base de datos.")
+        finally:
+            self.db.close()
+
+    # Query para obtener los datos de usuario por cedula, esta query solo es
+    # usada para validacion del jwt bearer
+    def get_usuario_x_cedula(self, cedula):
+
+        try:
+            sql = """
+                SELECT nit
+                FROM dbo.usuarios
+                WHERE nit = :cedula;
+            """
+
+            query = self.db.execute(text(sql), {"cedula": cedula}).fetchone()
+
+            return query[0]
+                
+        except Exception as ex:
+            print(str(ex))
             raise CustomException(str(ex))
         finally:
             self.db.close()
 
+    # Query para obtener los niveles de formación
     def get_nivel_formacion(self):
 
         try:
@@ -63,6 +87,7 @@ class Querys:
         finally:
             self.db.close()
 
+    # Query para obtener los tipos de actividad
     def get_tipo_actividad(self):
 
         try:
@@ -81,6 +106,7 @@ class Querys:
         finally:
             self.db.close()
 
+    # Query para obtener las ciudades
     def get_ciudades_formacion(self):
 
         try:
@@ -99,6 +125,7 @@ class Querys:
         finally:
             self.db.close()
 
+    # Query para obtener los tipos de competencia
     def tipos_competencia_formacion(self, tipo: int):
 
         try:
@@ -118,6 +145,7 @@ class Querys:
         finally:
             self.db.close()
 
+    # Query para obtener los macroprocesos
     def get_macroprocesos(self):
 
         try:
@@ -136,6 +164,7 @@ class Querys:
         finally:
             self.db.close()
 
+    # Query para obtener las modalidades
     def get_modalidad(self):
 
         try:
@@ -154,6 +183,7 @@ class Querys:
         finally:
             self.db.close()
 
+    # Query para obtener los proveedores
     def get_proveedores(self, valor: str):
 
         try:
@@ -167,6 +197,105 @@ class Querys:
 
             # Retornar directamente una lista de diccionarios
             return [{"id": key.id, "nit": key.nit, "nombres": key.nombres} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para buscar el numero siguiente del consecutivo
+    def buscar_numero_siguiente(self):
+
+        try:
+            sql = """
+                SELECT * 
+                FROM consecutivos 
+                WHERE tipo = 'FCH';
+            """
+            query = self.db.execute(text(sql)).fetchone()
+
+            if query:
+                return query.siguiente
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al consultar consecutivo.")
+        finally:
+            self.db.close()
+
+    # Query para insertar datos de la formación.
+    def guardar_formacion(self, data: dict):
+        try:
+            print(data)
+            reg = RegistroGeneralFormacionModel(data)
+            self.db.add(reg)
+            self.db.commit()
+        except Exception as ex:
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+        return True
+
+    # Query para actualizar el siguiente consecutivo
+    def actualizar_consecutivo(self, num_siguiente: int):
+        try:
+            sql = """
+                UPDATE consecutivos
+                SET siguiente = :siguiente
+                WHERE tipo = 'FCH';
+            """
+            self.db.execute(text(sql), {"siguiente": num_siguiente})
+            self.db.commit()
+                
+        except Exception as ex:
+            print("Error al actualizar:", ex)
+            self.db.rollback()
+            raise CustomException("Error al actualizar.")
+        finally:
+            self.db.close()
+
+    # Query para obtener las formaciones
+    def get_formaciones(self, valor: str):
+
+        try:
+            response = list()
+            query = self.db.query(
+                RegistroGeneralFormacionModel.id,
+                RegistroGeneralFormacionModel.codigo,
+                RegistroGeneralFormacionModel.tema,
+                TipoModalidadModel.nombre.label('modalidad'),
+                TipoEstadoFormacionModel.nombre.label('estado_formacion'),
+                RegistroGeneralFormacionModel.fecha_inicio,
+                RegistroGeneralFormacionModel.fecha_fin,
+            ).join(
+                TipoModalidadModel,
+                TipoModalidadModel.id == RegistroGeneralFormacionModel.modalidad
+            ).join(
+                TipoEstadoFormacionModel,
+                TipoEstadoFormacionModel.id == RegistroGeneralFormacionModel.estado_formacion
+            )
+
+            # Aplicar filtro solo si hay un término de búsqueda
+            if valor:
+                query = query.filter(or_(
+                    RegistroGeneralFormacionModel.codigo.like(f"%{valor}%"),
+                    RegistroGeneralFormacionModel.tema.like(f"%{valor}%")
+                ))
+
+            if query:
+                for key in query:
+                    response.append({
+                        "id": key.id,
+                        "codigo": key.codigo,
+                        "tema": key.tema,
+                        "modalidad": key.modalidad,
+                        "estado_formacion": key.estado_formacion,
+                        "fecha_inicio": str(key.fecha_inicio),
+                        "fecha_fin": str(key.fecha_fin),
+                    })
+
+            return response
                 
         except Exception as ex:
             print(str(ex))

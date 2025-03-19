@@ -8,6 +8,7 @@ from Models.tipo_actividad_model import TipoActividadModel
 from Models.ciudades_formacion_model import CiudadesFormacionModel
 from Models.tipos_competencia_formacion_model import TiposCompetenciaFormacionModel
 from Models.macroprocesos_model import MacroprocesosModel
+from Models.macroprocesos_cargos_model import MacroprocesosCargosModel
 from Models.tipo_modalidad_model import TipoModalidadModel
 from Models.tipo_estado_formacion_model import TipoEstadoFormacionModel
 
@@ -390,6 +391,33 @@ class Querys:
                     self.db.close()
 
             return response
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+    
+    # Query para obtener las formacion por id
+    def get_cargos_por_macroproceso(self, macroproceso: list):
+
+        try:
+            query = self.db.query(
+                MacroprocesosModel.id,
+                MacroprocesosModel.nombre,
+                MacroprocesosCargosModel.id.label('cargo_id'),
+                MacroprocesosCargosModel.nombre.label('cargo_nombre'),
+            ).join(
+                MacroprocesosCargosModel,
+                MacroprocesosCargosModel.macroproceso_id == MacroprocesosModel.id
+            ).filter(
+                MacroprocesosModel.estado == 1,
+                MacroprocesosCargosModel.estado == 1,
+                MacroprocesosCargosModel.macroproceso_id.in_(macroproceso)
+            ).all()
+
+            # Retornar directamente una lista de diccionarios
+            return [{"id": key.id, "macro_nombre": key.nombre, "cargo_id": key.cargo_id, "cargo_nombre": key.cargo_nombre} for key in query] if query else []
                 
         except Exception as ex:
             print(str(ex))

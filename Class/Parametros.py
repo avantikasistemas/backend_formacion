@@ -91,3 +91,23 @@ class Parametros:
         except Exception as e:
             print(f"Error al obtener información de tercero: {e}")
             raise CustomException("Error al obtener información de tercero.")
+
+    # Función para obtener los cargos por macroprocesos.
+    def get_cargos_por_macroproceso(self, data: dict):
+
+        try:
+
+            macroprocesos = data["macroprocesos"]
+
+            # Acá usamos la query para traer la información de los cargos
+            cargos = self.querys.get_cargos_por_macroproceso(macroprocesos)
+
+            print(f"cargos: {cargos}")
+
+
+            # Retornamos la información.
+            return self.tools.output(200, "Datos encontrados.", cargos)
+
+        except Exception as e:
+            print(f"Error al obtener información de tercero: {e}")
+            raise CustomException("Error al obtener información de tercero.")

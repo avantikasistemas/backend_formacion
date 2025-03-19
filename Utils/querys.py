@@ -1,6 +1,8 @@
 from Utils.tools import Tools, CustomException
-from sqlalchemy import text, or_
-from Models.registro_general_formacion_model import RegistroGeneralFormacionModel
+from sqlalchemy import text, or_, case
+from Models.registro_general_formacion_model import (
+    RegistroGeneralFormacionModel as RegistroGeneral
+)
 from Models.tipo_nivel_formacion_model import TipoNivelFormacionModel
 from Models.tipo_actividad_model import TipoActividadModel
 from Models.ciudades_formacion_model import CiudadesFormacionModel
@@ -153,7 +155,9 @@ class Querys:
                 MacroprocesosModel
             ).filter(
                 MacroprocesosModel.estado == 1
-            ).all()                 
+            ).order_by(
+                MacroprocesosModel.nombre
+            ).all()
 
             # Retornar directamente una lista de diccionarios
             return [{"id": key.id, "nombre": key.nombre} for key in query] if query else []
@@ -228,7 +232,7 @@ class Querys:
     def guardar_formacion(self, data: dict):
         try:
             print(data)
-            reg = RegistroGeneralFormacionModel(data)
+            reg = RegistroGeneral(data)
             self.db.add(reg)
             self.db.commit()
         except Exception as ex:
@@ -261,26 +265,26 @@ class Querys:
         try:
             response = list()
             query = self.db.query(
-                RegistroGeneralFormacionModel.id,
-                RegistroGeneralFormacionModel.codigo,
-                RegistroGeneralFormacionModel.tema,
+                RegistroGeneral.id,
+                RegistroGeneral.codigo,
+                RegistroGeneral.tema,
                 TipoModalidadModel.nombre.label('modalidad'),
                 TipoEstadoFormacionModel.nombre.label('estado_formacion'),
-                RegistroGeneralFormacionModel.fecha_inicio,
-                RegistroGeneralFormacionModel.fecha_fin,
+                RegistroGeneral.fecha_inicio,
+                RegistroGeneral.fecha_fin,
             ).join(
                 TipoModalidadModel,
-                TipoModalidadModel.id == RegistroGeneralFormacionModel.modalidad
+                TipoModalidadModel.id == RegistroGeneral.modalidad
             ).join(
                 TipoEstadoFormacionModel,
-                TipoEstadoFormacionModel.id == RegistroGeneralFormacionModel.estado_formacion
+                TipoEstadoFormacionModel.id == RegistroGeneral.estado_formacion
             )
 
             # Aplicar filtro solo si hay un término de búsqueda
             if valor:
                 query = query.filter(or_(
-                    RegistroGeneralFormacionModel.codigo.like(f"%{valor}%"),
-                    RegistroGeneralFormacionModel.tema.like(f"%{valor}%")
+                    RegistroGeneral.codigo.like(f"%{valor}%"),
+                    RegistroGeneral.tema.like(f"%{valor}%")
                 ))
 
             if query:
@@ -294,6 +298,96 @@ class Querys:
                         "fecha_inicio": str(key.fecha_inicio),
                         "fecha_fin": str(key.fecha_fin),
                     })
+
+            return response
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para obtener las formacion por id
+    def get_formacion_by_id(self, formacion_id: int):
+
+        try:
+            query = self.db.query(
+                RegistroGeneral.id,
+                RegistroGeneral.codigo,
+                RegistroGeneral.nivel_formacion,
+                TipoNivelFormacionModel.nombre.label('nivel_formacion_nombre'),
+                RegistroGeneral.tipo_actividad,
+                TipoActividadModel.nombre.label('tipo_actividad_nombre'),
+                RegistroGeneral.tema,
+                RegistroGeneral.origen,
+                RegistroGeneral.objetivo_general,
+                RegistroGeneral.objetivo_especifico,
+                RegistroGeneral.objetivo_especifico,
+                RegistroGeneral.modalidad,
+                TipoModalidadModel.nombre.label('modalidad_nombre'),
+                RegistroGeneral.duracion_horas,
+                RegistroGeneral.duracion_minutos,
+                RegistroGeneral.metodologia,
+                RegistroGeneral.tipo,
+                case(
+                    (RegistroGeneral.tipo == 1, "INTERNO"),
+                    (RegistroGeneral.tipo == 2, "EXTERNO"),
+                    else_="DESCONOCIDO"  # O cualquier otro valor por defecto
+                ).label("tipo_nombre"),
+                RegistroGeneral.proveedor,
+                RegistroGeneral.ciudad,
+                CiudadesFormacionModel.nombre.label('ciudad_nombre'),
+                RegistroGeneral.evaluacion,
+                RegistroGeneral.seguimiento,
+                RegistroGeneral.estado_formacion,
+                TipoEstadoFormacionModel.nombre.label('estado_formacion_nombre'),
+                RegistroGeneral.fecha_inicio,
+                RegistroGeneral.fecha_fin,
+                RegistroGeneral.created_at,
+            ).join(
+                TipoNivelFormacionModel,
+                TipoNivelFormacionModel.id == RegistroGeneral.nivel_formacion
+            ).join(
+                TipoActividadModel,
+                TipoActividadModel.id == RegistroGeneral.tipo_actividad
+            ).join(
+                TipoModalidadModel,
+                TipoModalidadModel.id == RegistroGeneral.modalidad
+            ).join(
+                CiudadesFormacionModel,
+                CiudadesFormacionModel.id == RegistroGeneral.ciudad
+            ).join(
+                TipoEstadoFormacionModel,
+                TipoEstadoFormacionModel.id == RegistroGeneral.estado_formacion
+            ).filter(
+                RegistroGeneral.id == formacion_id,
+                RegistroGeneral.estado == 1,
+                TipoNivelFormacionModel.estado == 1,
+                TipoActividadModel.estado == 1,
+                TipoModalidadModel.estado == 1,
+                CiudadesFormacionModel.estado == 1,
+                TipoEstadoFormacionModel.estado == 1,
+            ).first()
+
+            # ✅ Convertir directamente en un diccionario
+            response = query._asdict() if query else {}
+            if response:
+                try:
+                    sql = """
+                        SELECT nombres 
+                        FROM terceros 
+                        WHERE concepto_1 in (1,3)
+                        AND id = :id
+                    """
+                    consulta = self.db.execute(text(sql), {"id": response["proveedor"]}).fetchone()
+
+                    response["proveedor_nombre"] = consulta[0] if consulta else ''
+                        
+                except Exception as ex:
+                    print(str(ex))
+                    raise CustomException(str(ex))
+                finally:
+                    self.db.close()
 
             return response
                 

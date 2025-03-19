@@ -12,10 +12,8 @@ class Formacion:
 
     # Función para guardar una formación
     def guardar_formacion(self, data: dict):
-        """ Api que realiza la consulta del tercero a la base de datos. """
 
         try:
-
             codigo = ''
             
             # Consultamos el numero siguiente en el consecutivo.
@@ -42,7 +40,6 @@ class Formacion:
 
     # Función para obtener las formaciones creadas
     def get_formaciones(self, data: dict):
-        """ Api que realiza la consulta de los estados. """
 
         try:
 
@@ -53,6 +50,23 @@ class Formacion:
 
             # Retornamos la información.
             return self.tools.output(200, "Datos encontrados.", formaciones)
+
+        except Exception as e:
+            print(f"Error al obtener información de formaciones: {e}")
+            raise CustomException("Error al obtener información de formaciones.")
+
+    # Función para obtener las formaciones por id
+    def get_formacion_by_id(self, data: dict):
+
+        try:
+
+            formacion_id = data["formacion_id"]
+
+            # Llamamos a la función que trae la información de la formación.
+            data_formacion = self.querys.get_formacion_by_id(formacion_id)
+
+            # Retornamos la información.
+            return self.tools.output(200, "Datos encontrados.", data_formacion)
 
         except Exception as e:
             print(f"Error al obtener información de formaciones: {e}")

@@ -21,3 +21,10 @@ def get_formaciones(request: Request, db: Session = Depends(get_db)):
     data = getattr(request.state, "json_data", {})
     response = Formacion(db).get_formaciones(data)
     return response
+
+@formacion_router.post('/get_formacion_by_id', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def get_formacion_by_id(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).get_formacion_by_id(data)
+    return response

@@ -1,5 +1,6 @@
 from Utils.tools import Tools, CustomException
 from sqlalchemy import text, or_, case
+from sqlalchemy.sql import select
 from Models.registro_general_formacion_model import (
     RegistroGeneralFormacionModel as RegistroGeneral
 )
@@ -11,6 +12,12 @@ from Models.macroprocesos_model import MacroprocesosModel
 from Models.macroprocesos_cargos_model import MacroprocesosCargosModel
 from Models.tipo_modalidad_model import TipoModalidadModel
 from Models.tipo_estado_formacion_model import TipoEstadoFormacionModel
+from Models.tipos_competencia_formacion_detalles_model import TiposCompetenciaFormacionDetalleModel
+from Models.macroprocesos_formacion_detalles_model import MacroprocesosFormacionDetalleModel
+from Models.cargos_formacion_detalles_model import CargosFormacionDetalleModel
+from Models.ciudades_formacion_detalles_model import CiudadesFormacionDetalleModel
+from Models.personal_formacion_detalle_model import PersonalFormacionDetalleModel
+from collections import defaultdict
 
 class Querys:
 
@@ -232,15 +239,15 @@ class Querys:
     # Query para insertar datos de la formación.
     def guardar_formacion(self, data: dict):
         try:
-            print(data)
             reg = RegistroGeneral(data)
             self.db.add(reg)
             self.db.commit()
+            reg_id = reg.id
         except Exception as ex:
             raise CustomException(str(ex))
         finally:
             self.db.close()
-        return True
+        return reg_id
 
     # Query para actualizar el siguiente consecutivo
     def actualizar_consecutivo(self, num_siguiente: int):
@@ -323,7 +330,6 @@ class Querys:
                 RegistroGeneral.origen,
                 RegistroGeneral.objetivo_general,
                 RegistroGeneral.objetivo_especifico,
-                RegistroGeneral.objetivo_especifico,
                 RegistroGeneral.modalidad,
                 TipoModalidadModel.nombre.label('modalidad_nombre'),
                 RegistroGeneral.duracion_horas,
@@ -336,8 +342,6 @@ class Querys:
                     else_="DESCONOCIDO"  # O cualquier otro valor por defecto
                 ).label("tipo_nombre"),
                 RegistroGeneral.proveedor,
-                RegistroGeneral.ciudad,
-                CiudadesFormacionModel.nombre.label('ciudad_nombre'),
                 RegistroGeneral.evaluacion,
                 RegistroGeneral.seguimiento,
                 RegistroGeneral.estado_formacion,
@@ -355,9 +359,6 @@ class Querys:
                 TipoModalidadModel,
                 TipoModalidadModel.id == RegistroGeneral.modalidad
             ).join(
-                CiudadesFormacionModel,
-                CiudadesFormacionModel.id == RegistroGeneral.ciudad
-            ).join(
                 TipoEstadoFormacionModel,
                 TipoEstadoFormacionModel.id == RegistroGeneral.estado_formacion
             ).filter(
@@ -366,7 +367,6 @@ class Querys:
                 TipoNivelFormacionModel.estado == 1,
                 TipoActividadModel.estado == 1,
                 TipoModalidadModel.estado == 1,
-                CiudadesFormacionModel.estado == 1,
                 TipoEstadoFormacionModel.estado == 1,
             ).first()
 
@@ -402,6 +402,7 @@ class Querys:
     def get_cargos_por_macroproceso(self, macroproceso: list):
 
         try:
+            response = list()
             query = self.db.query(
                 MacroprocesosModel.id,
                 MacroprocesosModel.nombre,
@@ -416,11 +417,328 @@ class Querys:
                 MacroprocesosCargosModel.macroproceso_id.in_(macroproceso)
             ).all()
 
-            # Retornar directamente una lista de diccionarios
-            return [{"id": key.id, "macro_nombre": key.nombre, "cargo_id": key.cargo_id, "cargo_nombre": key.cargo_nombre} for key in query] if query else []
+            if query:
+                # Diccionario para agrupar por 'id' y 'macro_nombre'
+                grouped_data = defaultdict(lambda: {"macro_nombre": "", "cargos": []})
+
+                for item in query:
+                    group = grouped_data[item.id]
+                    group["macro_nombre"] = item.nombre
+                    group["cargos"].append({
+                        "cargo_id": item.cargo_id,
+                        "cargo_nombre": item.cargo_nombre
+                    })
+
+                # Convertir a lista con la estructura deseada
+                response = [{"id": k, "macro_nombre": v["macro_nombre"], "cargos": v["cargos"]} for k, v in grouped_data.items()]
+
+            return response
                 
         except Exception as ex:
             print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para insertar datos las competencias de la formación.
+    def guardar_competencias(self, data: dict):
+        try:
+            comp = TiposCompetenciaFormacionDetalleModel(data)
+            self.db.add(comp)
+            self.db.commit()
+            return True
+        except Exception as ex:
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para insertar los macroprocesos de la formación.
+    def guardar_macroprocesos(self, data: dict):
+        try:
+            macr = MacroprocesosFormacionDetalleModel(data)
+            self.db.add(macr)
+            self.db.commit()
+            return True
+        except Exception as ex:
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para insertar los cargos de la formación.
+    def guardar_cargos(self, data: dict):
+        try:
+            carg = CargosFormacionDetalleModel(data)
+            self.db.add(carg)
+            self.db.commit()
+            return True
+        except Exception as ex:
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para insertar las ciudades de la formación.
+    def guardar_ciudades(self, data: dict):
+        try:
+            ciu = CiudadesFormacionDetalleModel(data)
+            self.db.add(ciu)
+            self.db.commit()
+            return True
+        except Exception as ex:
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para traer los detalles de las competencias elegidas
+    def get_competencias_detalles(self, formacion_id):
+        
+        try:
+            response = dict()            
+            
+            # Subquery para obtener los ids de tipos de competencia formacion detalle donde formacion_id = 14
+            subquery = (
+                select(TiposCompetenciaFormacionDetalleModel.tipo_competencia_id)
+                .where(
+                    TiposCompetenciaFormacionDetalleModel.formacion_id == formacion_id,
+                    TiposCompetenciaFormacionDetalleModel.estado == 1
+                )
+                .scalar_subquery()
+            )
+
+            # Consulta 1
+            query_competencia_corporativa = (
+                self.db.query(TiposCompetenciaFormacionModel)
+                .filter(
+                    TiposCompetenciaFormacionModel.id.in_(subquery),
+                    TiposCompetenciaFormacionModel.tipo == 1,
+                    TiposCompetenciaFormacionModel.estado == 1
+                )
+            ).all()
+
+            # Consulta 2
+            query_competencia_rol = (
+                self.db.query(TiposCompetenciaFormacionModel)
+                .filter(
+                    TiposCompetenciaFormacionModel.id.in_(subquery),
+                    TiposCompetenciaFormacionModel.tipo == 2,
+                    TiposCompetenciaFormacionModel.estado == 1
+                )
+            ).all()
+
+            # Consulta 3
+            query_competencia_posicion = (
+                self.db.query(TiposCompetenciaFormacionModel)
+                .filter(
+                    TiposCompetenciaFormacionModel.id.in_(subquery),
+                    TiposCompetenciaFormacionModel.tipo == 3,
+                    TiposCompetenciaFormacionModel.estado == 1
+                )
+            ).all()
+            
+            response = {
+                "competencia_corporativa": [{"id": key.id, "nombre": key.nombre, "orden": key.orden} for key in query_competencia_corporativa] if query_competencia_corporativa else [],
+                "competencia_rol": [{"id": key.id, "nombre": key.nombre, "orden": key.orden} for key in query_competencia_rol] if query_competencia_rol else [], 
+                "competencia_posicion": [{"id": key.id, "nombre": key.nombre, "orden": key.orden} for key in query_competencia_posicion] if query_competencia_posicion else []
+            }
+            
+            # Retornar directamente una lista de diccionarios
+            return response
+                            
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para traer los detalles de los macroprocesos y cargos
+    def get_macroprocesos_cargos_detalles(self, formacion_id):
+        
+        try:
+            response = dict()
+            
+            # Subconsulta para obtener los macroproceso_id
+            subquery_macroprocesos = (
+                select(MacroprocesosFormacionDetalleModel.macroproceso_id)
+                .where(
+                    MacroprocesosFormacionDetalleModel.estado == 1,
+                    MacroprocesosFormacionDetalleModel.formacion_id == formacion_id
+                )
+                .scalar_subquery()
+            )
+
+            # Consulta principal
+            query_macroprocesos = (
+                self.db.query(MacroprocesosModel)
+                .filter(
+                    MacroprocesosModel.id.in_(subquery_macroprocesos),
+                    MacroprocesosModel.estado == 1
+                )
+                .order_by(MacroprocesosModel.nombre)
+            ).all()
+
+            # Consulta principal
+            query_cargos = self.db.query(
+                MacroprocesosModel.id,
+                MacroprocesosModel.nombre,
+                MacroprocesosCargosModel.id.label('cargo_id'),
+                MacroprocesosCargosModel.nombre.label('cargo_nombre'),
+            ).join(
+                MacroprocesosCargosModel,
+                MacroprocesosCargosModel.macroproceso_id == MacroprocesosModel.id
+            ).filter(
+                MacroprocesosModel.estado == 1,
+                MacroprocesosCargosModel.estado == 1,
+                MacroprocesosCargosModel.macroproceso_id.in_(subquery_macroprocesos)
+            ).all()
+
+            if query_cargos:
+                # Diccionario para agrupar por 'id' y 'macro_nombre'
+                grouped_data = defaultdict(lambda: {"macro_nombre": "", "cargos": []})
+
+                for item in query_cargos:
+                    group = grouped_data[item.id]
+                    group["macro_nombre"] = item.nombre
+                    group["cargos"].append({
+                        "cargo_id": item.cargo_id,
+                        "cargo_nombre": item.cargo_nombre
+                    })
+
+            response = {
+                "macroprocesos": [{"id": key.id, "nombre": key.nombre} for key in query_macroprocesos] if query_macroprocesos else [],
+                "cargos": [{"id": k, "macro_nombre": v["macro_nombre"], "cargos": v["cargos"]} for k, v in grouped_data.items()]
+            }
+            
+            # Retornar directamente una lista de diccionarios
+            return response
+                            
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para traer los detalles de las ciudades elegidas
+    def get_ciudades_detalles(self, formacion_id):
+        
+        try:      
+            
+            # Subquery para obtener los ids de tipos de ciudades
+            subquery = (
+                select(CiudadesFormacionDetalleModel.ciudad_id)
+                .where(
+                    CiudadesFormacionDetalleModel.formacion_id == formacion_id,
+                    CiudadesFormacionDetalleModel.estado == 1
+                )
+                .scalar_subquery()
+            )
+
+            query_ciudades = (
+                self.db.query(CiudadesFormacionModel)
+                .filter(
+                    CiudadesFormacionModel.id.in_(subquery),
+                    CiudadesFormacionModel.estado == 1
+                )
+            ).all()
+
+            # Retornar directamente una lista de diccionarios
+            return [{"id": key.id, "nombre": key.nombre} for key in query_ciudades] if query_ciudades else []
+
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para obtener los estados de la formación
+    def get_formacion_estados(self):
+
+        try:
+            query = self.db.query(
+                TipoEstadoFormacionModel
+            ).filter(
+                TipoEstadoFormacionModel.estado == 1
+            ).all()                 
+
+            # Retornar directamente una lista de diccionarios
+            return [{"id": key.id, "nombre": key.nombre} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para actualizar la formación
+    def actualizar_formacion(self, formacion_id: int, data: dict):
+
+        try:
+            query = self.db.query(
+                RegistroGeneral
+            ).filter_by(
+                id = formacion_id
+            ).update(data)                     
+            self.db.commit()
+            
+            if not query:
+                raise CustomException("Formación inexistente.")
+            
+            return True
+                
+        except Exception as ex:
+            print(ex)
+            raise CustomException("Error al actualizar formación.")
+        finally:
+            self.db.close()
+
+    # Query para obtener el personal activo
+    def get_personal_activo(self):
+
+        try:
+            sql = """
+                SELECT * FROM v_personal_activo;
+            """
+            query = self.db.execute(text(sql)).fetchall()
+
+            # Retornar directamente una lista de diccionarios
+            return [{"cedula": key[0], "nombre": key[1], "cargo": key[3]} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al consultar consecutivo.")
+        finally:
+            self.db.close()
+
+    # Query para desactivar personal por formacion id
+    def desactivar_personal_x_formacion(self, formacion_id: int):
+        
+        try:
+            query = self.db.query(
+                PersonalFormacionDetalleModel
+            ).filter(
+                PersonalFormacionDetalleModel.estado == 1,
+                PersonalFormacionDetalleModel.formacion_id == formacion_id
+            ).all()
+            
+            if query:
+                for key in query:
+                    key.estado = 0
+                    self.db.commit()
+                        
+            return True
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al desactivar personal.")
+        finally:
+            self.db.close()
+
+    # Query para insertar el personal de la formación.
+    def guardar_personal_formacion(self, data: dict):
+        try:
+            pers = PersonalFormacionDetalleModel(data)
+            self.db.add(pers)
+            self.db.commit()
+            return True
+        except Exception as ex:
             raise CustomException(str(ex))
         finally:
             self.db.close()

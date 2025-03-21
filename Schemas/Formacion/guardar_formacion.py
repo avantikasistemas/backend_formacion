@@ -13,7 +13,6 @@ class GuardarFormacion(BaseModel):
     metodologia: str
     tipo: int
     proveedor: int
-    ciudad: int
     evaluacion: str
     seguimiento: str
     fecha_inicio: str

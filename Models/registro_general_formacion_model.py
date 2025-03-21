@@ -20,7 +20,6 @@ class RegistroGeneralFormacionModel(BASE):
     metodologia = Column(String, nullable=False)
     tipo = Column(BigInteger, nullable=False)
     proveedor = Column(BigInteger, nullable=False)
-    ciudad = Column(BigInteger, nullable=False)
     evaluacion = Column(String, nullable=False)
     seguimiento = Column(String, nullable=False)
     estado_formacion = Column(BigInteger, nullable=False, default=1)
@@ -43,7 +42,6 @@ class RegistroGeneralFormacionModel(BASE):
         self.metodologia = data['metodologia']
         self.tipo = data['tipo']
         self.proveedor = data['proveedor']
-        self.ciudad = data['ciudad']
         self.evaluacion = data['evaluacion']
         self.seguimiento = data['seguimiento']
         self.fecha_inicio = data['fecha_inicio']

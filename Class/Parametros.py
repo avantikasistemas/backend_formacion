@@ -102,11 +102,32 @@ class Parametros:
             # Acá usamos la query para traer la información de los cargos
             cargos = self.querys.get_cargos_por_macroproceso(macroprocesos)
 
-            print(f"cargos: {cargos}")
-
-
             # Retornamos la información.
             return self.tools.output(200, "Datos encontrados.", cargos)
+
+        except Exception as e:
+            print(f"Error al obtener información de tercero: {e}")
+            raise CustomException("Error al obtener información de tercero.")
+
+    # Función para cargar los estados de la formación
+    def get_formacion_estados(self):
+
+        try:
+            response = dict()
+
+            # Acá usamos la query para traer la información de los estados.
+            estados = self.querys.get_formacion_estados()
+
+            # Acá usamos la query para traer el listado de personal activo.
+            personal = self.querys.get_personal_activo()
+            
+            response = {
+                "estados": estados,
+                "personal": personal
+            }
+
+            # Retornamos la información.
+            return self.tools.output(200, "Datos encontrados.", response)
 
         except Exception as e:
             print(f"Error al obtener información de tercero: {e}")

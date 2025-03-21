@@ -28,3 +28,24 @@ def get_formacion_by_id(request: Request, db: Session = Depends(get_db)):
     data = getattr(request.state, "json_data", {})
     response = Formacion(db).get_formacion_by_id(data)
     return response
+
+@formacion_router.post('/actualizar_formacion', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def actualizar_formacion(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).actualizar_formacion(data)
+    return response
+
+@formacion_router.post('/guardar_personal_formacion', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def guardar_personal_formacion(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).guardar_personal_formacion(data)
+    return response
+
+@formacion_router.post('/obtener_personal_seleccionado_formacion', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def obtener_personal_seleccionado_formacion(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).obtener_personal_seleccionado_formacion(data)
+    return response

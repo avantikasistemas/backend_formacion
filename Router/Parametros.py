@@ -26,3 +26,9 @@ def get_cargos_por_macroproceso(request: Request, db: Session = Depends(get_db))
     data = getattr(request.state, "json_data", {})
     response = Parametros(db).get_cargos_por_macroproceso(data)
     return response
+
+@parametros_router.post('/get_formacion_estados', tags=["Parametros"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def get_formacion_estados(request: Request, db: Session = Depends(get_db)):
+    response = Parametros(db).get_formacion_estados()
+    return response

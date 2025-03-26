@@ -194,25 +194,12 @@ class Formacion:
             
             formacion_id = data["formacion_id"]
             
-            # self.querys.desactivar_personal_x_formacion(formacion_id)
-            
-            # if not personal:
-            #     # Retornamos mensaje de no guardado
-            #     msg = f"No hay personal a guardar."
-            #     return self.tools.output(200, msg, data)
-            
-            # for key in personal:
-            #     data_guardar = {
-            #         "formacion_id": formacion_id,
-            #         "nit": key["cedula"],
-            #         "created_at": datetime.today(),
-            #     }
-            #     self.querys.guardar_personal_formacion(data_guardar)
+            personal = self.querys.get_personal_formacion(formacion_id)
 
             # Retornamos la información.
-            msg = f"Personal guardado exitosamente."
-            return self.tools.output(200, msg)
+            msg = "Datos encontrados."
+            return self.tools.output(200, msg, personal)
 
         except Exception as e:
-            print(f"Error al guardar registro de formación: {e}")
-            raise CustomException("Error al guardar registro de formación.")
+            print(f"Error al obtener datos de personal: {e}")
+            raise CustomException("Error al obtener datos de personal.")

@@ -300,7 +300,7 @@ class Querys:
                     response.append({
                         "id": key.id,
                         "codigo": key.codigo,
-                        "tema": key.tema,
+                        "tema": key.tema.upper(),
                         "modalidad": key.modalidad,
                         "estado_formacion": key.estado_formacion,
                         "fecha_inicio": str(key.fecha_inicio),
@@ -740,5 +740,56 @@ class Querys:
             return True
         except Exception as ex:
             raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para obtener el personal segun la formación id
+    def get_personal_formacion(self, formacion_id: int):
+        
+        try:
+            response = list()
+            query = self.db.query(
+                PersonalFormacionDetalleModel
+            ).filter(
+                PersonalFormacionDetalleModel.estado == 1,
+                PersonalFormacionDetalleModel.formacion_id == formacion_id
+            ).all()
+            
+            if query:
+                for key in query:
+                    cedula = key.nit
+                    response.append(self.get_extra_data_personal(cedula))             
+
+            return response
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al obetener datos del personal.")
+        finally:
+            self.db.close()
+
+    # Query para traer los datos extra del personal elegido
+    def get_extra_data_personal(self, cedula):
+        
+        try:
+            result = dict()
+            sql = """
+                SELECT nombres, descripcion 
+                FROM v_personal_activo 
+                WHERE nit = :nit
+            """
+            consulta = self.db.execute(text(sql), {"nit": cedula}).fetchone()
+            if consulta:
+                result = {
+                    "cedula": cedula,
+                    "nombre": consulta[0],
+                    "cargo": consulta[1],
+                }
+
+            return result
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al obtener datos del personal.")
         finally:
             self.db.close()

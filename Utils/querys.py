@@ -292,7 +292,8 @@ class Querys:
             if valor:
                 query = query.filter(or_(
                     RegistroGeneral.codigo.like(f"%{valor}%"),
-                    RegistroGeneral.tema.like(f"%{valor}%")
+                    RegistroGeneral.tema.like(f"%{valor}%"),
+                    TipoEstadoFormacionModel.nombre.like(f"%{valor}%"),
                 ))
 
             if query:
@@ -690,20 +691,28 @@ class Querys:
             self.db.close()
 
     # Query para obtener el personal activo
-    def get_personal_activo(self):
+    def get_personal_activo(self, formacion_id: int):
 
-        try:
+        try:           
+            
             sql = """
-                SELECT * FROM v_personal_activo;
+                SELECT nit, nombres 
+                FROM v_personal_activo 
+                WHERE cargo in (
+                                SELECT cargo_y_personal 
+                                FROM macroprocesos_cargos 
+                                WHERE id in (
+                                    SELECT cargo_id FROM cargos_formacion_detalles WHERE formacion_id = :formacion AND estado = 1
+                                ))
             """
-            query = self.db.execute(text(sql)).fetchall()
+            query = self.db.execute(text(sql), ({"formacion": formacion_id})).fetchall()
 
             # Retornar directamente una lista de diccionarios
-            return [{"cedula": key[0], "nombre": key[1], "cargo": key[3]} for key in query] if query else []
+            return [{"cedula": key[0], "nombre": key[1]} for key in query] if query else []
                 
         except Exception as ex:
             print(str(ex))
-            raise CustomException("Error al consultar consecutivo.")
+            raise CustomException("Error al obtener personal.")
         finally:
             self.db.close()
 
@@ -791,5 +800,75 @@ class Querys:
         except Exception as ex:
             print(str(ex))
             raise CustomException("Error al obtener datos del personal.")
+        finally:
+            self.db.close()
+
+    # Query para desactivar tanto macroproceso como cargo por formacion id
+    def desactivar_macro_y_cargo_x_id(self, formacion_id: int):
+        
+        try:
+            query = self.db.query(
+                MacroprocesosFormacionDetalleModel
+            ).filter(
+                MacroprocesosFormacionDetalleModel.estado == 1,
+                MacroprocesosFormacionDetalleModel.formacion_id == formacion_id
+            ).all()
+            
+            if query:
+                for key in query:
+                    key.estado = 0
+                    self.db.commit()
+            self.db.close()
+                    
+            query_cargos = self.db.query(
+                CargosFormacionDetalleModel
+            ).filter(
+                CargosFormacionDetalleModel.estado == 1,
+                CargosFormacionDetalleModel.formacion_id == formacion_id
+            ).all()
+            
+            if query_cargos:
+                for key in query_cargos:
+                    key.estado = 0
+                    self.db.commit()
+            self.db.close()
+            
+            query_personal = self.db.query(
+                PersonalFormacionDetalleModel
+            ).filter(
+                PersonalFormacionDetalleModel.estado == 1,
+                PersonalFormacionDetalleModel.formacion_id == formacion_id
+            ).all()
+            
+            if query_personal:
+                for key in query_personal:
+                    key.estado = 0
+                    self.db.commit()
+                        
+            return True
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al desactivar macroproceso o cargos.")
+        finally:
+            self.db.close()
+
+    # Query para obtener el estado de la formación
+    def obtener_estado_formacion(self, formacion_id: int):
+        
+        try:
+            query = self.db.query(
+                RegistroGeneral
+            ).filter(
+                RegistroGeneral.estado == 1,
+                RegistroGeneral.id == formacion_id
+            ).first()
+            
+            if query:     
+                return query
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al obtener datos de la formación.")
         finally:
             self.db.close()

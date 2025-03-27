@@ -49,3 +49,10 @@ def obtener_personal_seleccionado_formacion(request: Request, db: Session = Depe
     data = getattr(request.state, "json_data", {})
     response = Formacion(db).obtener_personal_seleccionado_formacion(data)
     return response
+
+@formacion_router.post('/actualizar_macroprocesos', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def actualizar_macroprocesos(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).actualizar_macroprocesos(data)
+    return response

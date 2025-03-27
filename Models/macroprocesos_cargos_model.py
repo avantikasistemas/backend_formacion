@@ -8,6 +8,7 @@ class MacroprocesosCargosModel(BASE):
     
     id = Column(BigInteger, primary_key=True)
     macroproceso_id = Column(BigInteger)
+    cargo_y_personal = Column(String, nullable=True)
     nombre = Column(String, nullable=False)
     estado = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime(), default=datetime.now(), nullable=False)

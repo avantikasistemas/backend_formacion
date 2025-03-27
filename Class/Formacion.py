@@ -141,9 +141,17 @@ class Formacion:
     # Función para actualizar una formación
     def actualizar_formacion(self, data: dict):
 
-        try:            
+        try:
+            msg = "La formación ya se encuentra finalizada y no se puede editar."
             # Separamos la formación id de la data de entrada.
             formacion_id = int(data.pop("formacion_id"))
+            
+            # Buscamos si la formación ya se encuentra finalizada y si es así
+            # No dejamos que actualice más.
+            formacion = self.querys.obtener_estado_formacion(formacion_id)
+            if formacion:
+                if formacion.estado_formacion == 3:
+                    raise CustomException(msg)
             
             # Llamamos a la query que realiza el actualizado.
             self.querys.actualizar_formacion(formacion_id, data)
@@ -154,7 +162,7 @@ class Formacion:
 
         except Exception as e:
             print(f"Error al actualizar registro de formación: {e}")
-            raise CustomException("Error al actualizar registro de formación.")
+            raise CustomException(msg)
 
     # Función para guardar una formación
     def guardar_personal_formacion(self, data: dict):
@@ -163,6 +171,14 @@ class Formacion:
             
             formacion_id = data["formacion_id"]
             personal = data["personal"]
+            
+            # Buscamos si la formación ya se encuentra finalizada y si es así
+            # No dejamos que actualice más.
+            formacion = self.querys.obtener_estado_formacion(formacion_id)
+            if formacion:
+                msg = "La formación ya se encuentra finalizada y no se puede editar."
+                if formacion.estado_formacion == 3:
+                    raise CustomException(msg)
             
             self.querys.desactivar_personal_x_formacion(formacion_id)
             
@@ -185,7 +201,7 @@ class Formacion:
 
         except Exception as e:
             print(f"Error al guardar registro de formación: {e}")
-            raise CustomException("Error al guardar registro de formación.")
+            raise CustomException(msg)
 
     # Función para guardar una formación
     def obtener_personal_seleccionado_formacion(self, data: dict):
@@ -203,3 +219,54 @@ class Formacion:
         except Exception as e:
             print(f"Error al obtener datos de personal: {e}")
             raise CustomException("Error al obtener datos de personal.")
+
+    # Función para actualizar los macroprocesos de una formación
+    def actualizar_macroprocesos(self, data: dict):
+
+        try:
+            data_macro_insert = dict()
+            data_cargo_insert = dict()
+
+            formacion_id = data["formacion_id"]
+            lista_macroprocesos = data["lista_macroprocesos"]
+            lista_cargos = data["lista_cargos"]
+            
+            # Buscamos si la formación ya se encuentra finalizada y si es así
+            # No dejamos que actualice más.
+            formacion = self.querys.obtener_estado_formacion(formacion_id)
+            if formacion:
+                msg = "La formación ya se encuentra finalizada y no se puede editar."
+                if formacion.estado_formacion == 3:
+                    raise CustomException(msg)
+
+            
+            if (not lista_macroprocesos or not lista_cargos):
+                return CustomException(
+                    "Ninguna de las listas puede estar vacía.")
+
+            # Desactivamos los macroprocesos actuales,                
+            self.querys.desactivar_macro_y_cargo_x_id(formacion_id)
+
+            for macro in lista_macroprocesos:
+                data_macro_insert = {
+                    "formacion_id": formacion_id,
+                    "macroproceso_id": macro,
+                    "created_at": datetime.today(),
+                }
+                self.querys.guardar_macroprocesos(data_macro_insert)
+
+            for cargo in lista_cargos:
+                data_cargo_insert = {
+                    "formacion_id": formacion_id,
+                    "cargo_id": cargo,
+                    "created_at": datetime.today(),
+                }
+                self.querys.guardar_cargos(data_cargo_insert)
+
+            # Retornamos la información.
+            msg = f"Formación actualizada exitosamente."
+            return self.tools.output(200, msg, data)
+
+        except Exception as e:
+            print(f"Error al guardar registro de formación: {e}")
+            raise CustomException(msg)

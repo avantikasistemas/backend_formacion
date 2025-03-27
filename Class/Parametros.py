@@ -110,16 +110,18 @@ class Parametros:
             raise CustomException("Error al obtener información de tercero.")
 
     # Función para cargar los estados de la formación
-    def get_formacion_estados(self):
+    def get_formacion_estados(self, data: dict):
 
         try:
             response = dict()
+            
+            formacion_id = data["formacion_id"]
 
             # Acá usamos la query para traer la información de los estados.
             estados = self.querys.get_formacion_estados()
 
             # Acá usamos la query para traer el listado de personal activo.
-            personal = self.querys.get_personal_activo()
+            personal = self.querys.get_personal_activo(formacion_id)
             
             response = {
                 "estados": estados,

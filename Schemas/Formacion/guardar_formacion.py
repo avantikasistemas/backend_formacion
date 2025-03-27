@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class GuardarFormacion(BaseModel):
     nivel_formacion: int
@@ -15,5 +16,5 @@ class GuardarFormacion(BaseModel):
     proveedor: int
     evaluacion: str
     seguimiento: str
-    fecha_inicio: str
-    fecha_fin: str
+    fecha_inicio: Optional[str]
+    fecha_fin: Optional[str]

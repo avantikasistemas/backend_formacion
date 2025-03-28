@@ -33,3 +33,10 @@ def get_formacion_estados(request: Request, db: Session = Depends(get_db)):
     data = getattr(request.state, "json_data", {})
     response = Parametros(db).get_formacion_estados(data)
     return response
+
+@parametros_router.post('/obtener_todo_personal_activo', tags=["Parametros"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def obtener_todo_personal_activo(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Parametros(db).obtener_todo_personal_activo(data)
+    return response

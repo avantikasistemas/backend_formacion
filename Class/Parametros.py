@@ -55,6 +55,9 @@ class Parametros:
             # Llamamos a la función de consultar get_modalidad
             modalidad = self.querys.get_modalidad()
 
+            # Llamamos a la función de consultar estados de formación
+            formacion_estados = self.querys.get_formacion_estados()
+
             # Armamos el diccionario de salida
             data_response.update({
                 "nivel_formacion": nivel_formacion,
@@ -64,7 +67,8 @@ class Parametros:
                 "competencia_rol": competencia_rol,
                 "competencia_posicion": competencia_posicion,
                 "macroprocesos": macroprocesos,
-                "tipo_modalidad": modalidad
+                "tipo_modalidad": modalidad,
+                "formacion_estados": formacion_estados
             })
 
             # Retornamos la información.
@@ -134,3 +138,22 @@ class Parametros:
         except Exception as e:
             print(f"Error al obtener información de tercero: {e}")
             raise CustomException("Error al obtener información de tercero.")
+
+    # Función para cargar todo el personal activo
+    def obtener_todo_personal_activo(self, data: dict):
+
+        try:
+            response = dict()
+            
+            valor = data["valor"]
+
+            # Acá usamos la query para traer el listado de personal activo.
+            personal = self.querys.obtener_todo_personal_activo(valor)
+
+            # Retornamos la información.
+            return self.tools.output(200, "Datos encontrados.", personal)
+
+        except Exception as e:
+            print(f"Error al obtener el personal: {e}")
+            raise CustomException("Error al obtener el personal.")
+

@@ -24,6 +24,7 @@ class Querys:
     def __init__(self, db):
         self.db = db
         self.tools = Tools()
+        self.query_params = dict()
 
     # Query para obtener la informacion del usuario
     def get_usuario(self, usuario, password):
@@ -690,7 +691,7 @@ class Querys:
         finally:
             self.db.close()
 
-    # Query para obtener el personal activo
+    # Query para obtener el personal activo segun los cargos llenados x formacion.
     def get_personal_activo(self, formacion_id: int):
 
         try:           
@@ -872,3 +873,164 @@ class Querys:
             raise CustomException("Error al obtener datos de la formación.")
         finally:
             self.db.close()
+
+    # Query para obtener el personal activo segun los cargos llenados x formacion.
+    def obtener_todo_personal_activo(self, valor):
+
+        try:           
+            
+            sql = """
+                SELECT nit, nombres FROM v_personal_activo WHERE nombres LIKE :valor;
+            """
+            query = self.db.execute(text(sql), {"valor": f"%{valor}%"}).fetchall()
+
+            # Retornar directamente una lista de diccionarios
+            return [{"cedula": key[0], "nombre": key[1]} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al obtener personal.")
+        finally:
+            self.db.close()
+
+    # Query para consultar registros y datos de formaciones
+    def consultar_datos(self, data: dict):
+        
+        try:
+            codigo = data["codigo"]
+            tema = data["tema"]
+            macroproceso = data["macroproceso"]
+            usuario = data["usuario"]
+            nivel_formacion = data["nivel_formacion"]
+            tipo_actividad = data["tipo_actividad"]
+            modalidad = data["modalidad"]
+            estado_formacion = data["estado_formacion"]
+            fecha_desde = data["fecha_desde"]
+            fecha_hasta = data["fecha_hasta"]
+            cant_registros = 0
+            limit = data["limit"]
+            position = data["position"]
+
+            response = list()
+            
+            sql = """
+                SELECT COUNT(*) OVER() AS total_registros, rgf.id, rgf.codigo, nf.nombre as nivel_formacion, ta.nombre as tipo_actividad, rgf.tema,
+                mo.nombre as modalidad, ef.nombre as estado_formacion, vpa.nombres as nombre_personal, m.nombre as macroproceso,
+                rgf.fecha_inicio, rgf.fecha_fin
+                FROM dbo.registro_general_formacion rgf
+                INNER JOIN tipo_nivel_formacion nf ON nf.id = rgf.nivel_formacion AND nf.estado = 1
+                INNER JOIN tipo_actividad ta ON ta.id = rgf.tipo_actividad AND ta.estado = 1
+                INNER JOIN tipo_modalidad mo ON mo.id = rgf.modalidad AND mo.estado = 1
+                INNER JOIN estado_formacion ef ON ef.id = rgf.estado_formacion AND ef.estado = 1
+                INNER JOIN personal_formacion_detalle pfd on pfd.formacion_id = rgf.id AND pfd.estado = 1
+                INNER JOIN v_personal_activo vpa on vpa.nit = pfd.nit
+                INNER JOIN macroprocesos_cargos mc on mc.cargo_y_personal = vpa.cargo
+				INNER JOIN macroprocesos m on m.id = mc.macroproceso_id
+                WHERE rgf.estado = 1 
+            """
+
+            if codigo:
+                sql = self.add_codigo_query(sql, codigo)
+            if tema:
+                sql = self.add_tema_query(sql, tema)
+            if macroproceso:
+                sql = self.add_macroproceso_query(sql, macroproceso)
+            if usuario:
+                sql = self.add_usuario_query(sql, usuario)
+            if nivel_formacion:
+                sql = self.add_nivel_formacion_query(sql, nivel_formacion)
+            if tipo_actividad:
+                sql = self.add_tipo_actividad_query(sql, tipo_actividad)
+            if modalidad:
+                sql = self.add_modalidad_query(sql, modalidad)
+            if estado_formacion:
+                sql = self.add_estado_formacion_query(sql, estado_formacion)
+            if fecha_desde and fecha_hasta:
+                sql = self.add_fechas_query(
+                    sql, 
+                    fecha_desde, 
+                    fecha_hasta
+                )
+            
+            new_offset = self.obtener_limit(limit, position)
+            self.query_params.update({"offset": new_offset, "limit": limit})
+            sql = sql + " ORDER BY rgf.id ASC OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY;"
+
+            if self.query_params:
+                query = self.db.execute(text(sql), self.query_params).fetchall()
+            else:
+                query = self.db.execute(text(sql)).fetchall()
+
+            if query:
+                cant_registros = query[0][0]
+                for index, key in enumerate(query): 
+                    response.append({
+                        "id": key[1],
+                        "codigo": key[2],
+                        "nivel_formacion": key[3],
+                        "tipo_actividad": key[4],
+                        "tema": key[5],
+                        "modalidad": key[6],
+                        "estado_formacion": key[7],
+                        "nombre": key[8],
+                        "macroproceso": key[9],
+                        "fecha_inicio": str(key[10]) if key[10] else '',
+                        "fecha_fin": str(key[11]) if key[11] else '',
+                    })
+            result = {"registros": response, "cant_registros": cant_registros}
+            return result
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    def add_codigo_query(self, sql, codigo):
+        sql = sql + " AND rgf.codigo LIKE :codigo"
+        self.query_params.update({"codigo": f"%{codigo}%"})
+        return sql
+
+    def add_tema_query(self, sql, tema):
+        sql = sql + " AND rgf.tema LIKE :tema"
+        self.query_params.update({"tema": f"%{tema}%"})
+        return sql
+
+    def add_macroproceso_query(self, sql, macroproceso):
+        sql = sql + " AND m.id = :macroproceso"
+        self.query_params.update({"macroproceso": macroproceso})
+        return sql
+
+    def add_usuario_query(self, sql, usuario):
+        sql = sql + " AND vpa.nit = :usuario"
+        self.query_params.update({"usuario": usuario})
+        return sql
+
+    def add_nivel_formacion_query(self, sql, nivel_formacion):
+        sql = sql + " AND rgf.nivel_formacion = :nivel_formacion"
+        self.query_params.update({"nivel_formacion": nivel_formacion})
+        return sql
+
+    def add_tipo_actividad_query(self, sql, tipo_actividad):
+        sql = sql + " AND rgf.tipo_actividad = :tipo_actividad"
+        self.query_params.update({"tipo_actividad": tipo_actividad})
+        return sql
+
+    def add_modalidad_query(self, sql, modalidad):
+        sql = sql + " AND rgf.modalidad = :modalidad"
+        self.query_params.update({"modalidad": modalidad})
+        return sql
+
+    def add_estado_formacion_query(self, sql, estado_formacion):
+        sql = sql + " AND rgf.estado_formacion = :estado_formacion"
+        self.query_params.update({"estado_formacion": estado_formacion})
+        return sql
+
+    def add_fechas_query(self, sql, fecha_desde, fecha_hasta):
+        sql = sql + " AND rgf.fecha_inicio BETWEEN :fecha_desde AND :fecha_hasta"
+        self.query_params.update({"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta})
+        return sql
+
+    def obtener_limit(self, limit: int, position: int):
+        offset = (position - 1) * limit
+        return offset

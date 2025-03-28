@@ -56,3 +56,10 @@ def actualizar_macroprocesos(request: Request, db: Session = Depends(get_db)):
     data = getattr(request.state, "json_data", {})
     response = Formacion(db).actualizar_macroprocesos(data)
     return response
+
+@formacion_router.post('/consultar_datos', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def consultar_datos(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).consultar_datos(data)
+    return response

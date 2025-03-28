@@ -32,8 +32,12 @@ class Formacion:
                 or not lista_competencia_posicion or not lista_macroprocesos
                 or not lista_cargos or not lista_ciudades):
                 
-                return CustomException(
+                raise CustomException(
                     "Ninguna de las listas puede estar vacía.")
+                
+            if (not data["modalidad"] or not data["tipo"]):
+                raise CustomException(
+                    "Modalidad o Tipo no debene star vacíos.")
             
             # Consultamos el numero siguiente en el consecutivo.
             num_siguiente = self.querys.buscar_numero_siguiente()

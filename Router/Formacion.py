@@ -10,7 +10,7 @@ formacion_router = APIRouter()
 
 @formacion_router.post('/guardar_formacion', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
 @http_decorator
-def guardar_formacion(request: Request, formacion: GuardarFormacion, db: Session = Depends(get_db)):
+def guardar_formacion(request: Request, db: Session = Depends(get_db)):
     data = getattr(request.state, "json_data", {})
     response = Formacion(db).guardar_formacion(data)
     return response

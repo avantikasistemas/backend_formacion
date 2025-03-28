@@ -287,6 +287,8 @@ class Querys:
             ).join(
                 TipoEstadoFormacionModel,
                 TipoEstadoFormacionModel.id == RegistroGeneral.estado_formacion
+            ).filter(
+                RegistroGeneral.estado == 1
             )
 
             # Aplicar filtro solo si hay un término de búsqueda

@@ -247,8 +247,8 @@ class Formacion:
 
             
             if (not lista_macroprocesos or not lista_cargos):
-                return CustomException(
-                    "Ninguna de las listas puede estar vacía.")
+                msg = "Ninguna de las listas puede estar vacía."
+                raise CustomException(msg)
 
             # Desactivamos los macroprocesos actuales,                
             self.querys.desactivar_macro_y_cargo_x_id(formacion_id)

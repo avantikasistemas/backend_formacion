@@ -912,13 +912,15 @@ class Querys:
             cant_registros = 0
             limit = data["limit"]
             position = data["position"]
+            horas = 0
+            minutos = 0
 
             response = list()
             
             sql = """
                 SELECT COUNT(*) OVER() AS total_registros, rgf.id, rgf.codigo, nf.nombre as nivel_formacion, ta.nombre as tipo_actividad, rgf.tema,
                 mo.nombre as modalidad, ef.nombre as estado_formacion, vpa.nombres as nombre_personal, m.nombre as macroproceso,
-                rgf.fecha_inicio, rgf.fecha_fin
+                rgf.fecha_inicio, rgf.fecha_fin, rgf.duracion_horas, rgf.duracion_minutos
                 FROM dbo.registro_general_formacion rgf
                 INNER JOIN tipo_nivel_formacion nf ON nf.id = rgf.nivel_formacion AND nf.estado = 1
                 INNER JOIN tipo_actividad ta ON ta.id = rgf.tipo_actividad AND ta.estado = 1
@@ -965,7 +967,13 @@ class Querys:
 
             if query:
                 cant_registros = query[0][0]
-                for index, key in enumerate(query): 
+                for index, key in enumerate(query):
+                    if key[12] != 0:
+                        horas = key[12]
+                    if key[13] != 0:
+                        minutos = key[13]
+                    duracion = f"{horas} horas {minutos} minutos"
+                    
                     response.append({
                         "id": key[1],
                         "codigo": key[2],
@@ -978,6 +986,7 @@ class Querys:
                         "macroproceso": key[9],
                         "fecha_inicio": str(key[10]) if key[10] else '',
                         "fecha_fin": str(key[11]) if key[11] else '',
+                        "duracion": duracion,
                     })
             result = {"registros": response, "cant_registros": cant_registros}
             return result

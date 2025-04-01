@@ -1,6 +1,7 @@
 from Utils.tools import Tools, CustomException
 from Utils.querys import Querys
 from datetime import datetime
+import json
 
 class Formacion:
 
@@ -27,17 +28,20 @@ class Formacion:
             lista_macroprocesos = data["lista_macroprocesos"]
             lista_cargos = data["lista_cargos"]
             lista_ciudades = data["lista_ciudades"]
+            lista_origenes = data["origen"]
+            lista_evaluaciones = data["evaluacion"]
             
             if (not lista_competencia_corporativa or not lista_competencia_rol
                 or not lista_competencia_posicion or not lista_macroprocesos
-                or not lista_cargos or not lista_ciudades):
+                or not lista_cargos or not lista_ciudades 
+                or not lista_origenes or not lista_evaluaciones):
                 
                 raise CustomException(
                     "Ninguna de las listas puede estar vacía.")
                 
             if (not data["modalidad"] or not data["tipo"]):
                 raise CustomException(
-                    "Modalidad o Tipo no debene star vacíos.")
+                    "Modalidad o Tipo no deben estar vacíos.")
             
             # Consultamos el numero siguiente en el consecutivo.
             num_siguiente = self.querys.buscar_numero_siguiente()
@@ -65,6 +69,9 @@ class Formacion:
                 estado_formacion = 2
                 
             data["estado_formacion"] = estado_formacion
+            
+            data["origen"] = json.dumps(lista_origenes)
+            data["evaluacion"] = json.dumps(lista_evaluaciones)
 
             # Guardamos los datos de la formación.
             formacion_id = self.querys.guardar_formacion(data)

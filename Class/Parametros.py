@@ -26,6 +26,8 @@ class Parametros:
             competencia_rol = list()
             competencia_posicion = list()
             macroprocesos = list()
+            origen_necesidad = list()
+            tipo_evaluacion = list()
             
 
             # Llamamos a la función de consultar get_nivel_formacion
@@ -58,6 +60,12 @@ class Parametros:
             # Llamamos a la función de consultar estados de formación
             formacion_estados = self.querys.get_formacion_estados()
 
+            # Llamamos a la función de consultar estados de formación
+            origen_necesidad = self.querys.get_origen_necesidad()
+
+            # Llamamos a la función de consultar estados de formación
+            tipo_evaluacion = self.querys.get_tipo_evaluacion()
+
             # Armamos el diccionario de salida
             data_response.update({
                 "nivel_formacion": nivel_formacion,
@@ -68,7 +76,9 @@ class Parametros:
                 "competencia_posicion": competencia_posicion,
                 "macroprocesos": macroprocesos,
                 "tipo_modalidad": modalidad,
-                "formacion_estados": formacion_estados
+                "formacion_estados": formacion_estados,
+                "origen_necesidad": origen_necesidad,
+                "tipo_evaluacion": tipo_evaluacion
             })
 
             # Retornamos la información.

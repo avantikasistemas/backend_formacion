@@ -17,7 +17,10 @@ from Models.macroprocesos_formacion_detalles_model import MacroprocesosFormacion
 from Models.cargos_formacion_detalles_model import CargosFormacionDetalleModel
 from Models.ciudades_formacion_detalles_model import CiudadesFormacionDetalleModel
 from Models.personal_formacion_detalle_model import PersonalFormacionDetalleModel
+from Models.tipo_origen_necesidad_model import TipoOrigenNecesidadModel
+from Models.tipo_evaluacion_model import TipoEvaluacionModel
 from collections import defaultdict
+import json
 
 class Querys:
 
@@ -387,6 +390,11 @@ class Querys:
                     consulta = self.db.execute(text(sql), {"id": response["proveedor"]}).fetchone()
 
                     response["proveedor_nombre"] = consulta[0] if consulta else ''
+                    
+                    evaluacion_ids = json.loads(response["evaluacion"])
+                    evaluaciones = self.get_evaluaciones_by_id(evaluacion_ids)
+                    
+                    response["evaluacion"] = evaluaciones
                         
                 except Exception as ex:
                     print(str(ex))
@@ -997,51 +1005,117 @@ class Querys:
         finally:
             self.db.close()
 
+    # Función para agregar condición de código a la consulta principal
     def add_codigo_query(self, sql, codigo):
         sql = sql + " AND rgf.codigo LIKE :codigo"
         self.query_params.update({"codigo": f"%{codigo}%"})
         return sql
 
+    # Función para agregar condición de tema a la consulta principal
     def add_tema_query(self, sql, tema):
         sql = sql + " AND rgf.tema LIKE :tema"
         self.query_params.update({"tema": f"%{tema}%"})
         return sql
 
+    # Función para agregar condición de macroproceso a la consulta principal
     def add_macroproceso_query(self, sql, macroproceso):
         sql = sql + " AND m.id = :macroproceso"
         self.query_params.update({"macroproceso": macroproceso})
         return sql
 
+    # Función para agregar condición de usuario a la consulta principal
     def add_usuario_query(self, sql, usuario):
         sql = sql + " AND vpa.nit = :usuario"
         self.query_params.update({"usuario": usuario})
         return sql
 
+    # Función para agregar condición de nivel formación a la consulta principal
     def add_nivel_formacion_query(self, sql, nivel_formacion):
         sql = sql + " AND rgf.nivel_formacion = :nivel_formacion"
         self.query_params.update({"nivel_formacion": nivel_formacion})
         return sql
 
+    # Función para agregar condición de tipo actividad a la consulta principal
     def add_tipo_actividad_query(self, sql, tipo_actividad):
         sql = sql + " AND rgf.tipo_actividad = :tipo_actividad"
         self.query_params.update({"tipo_actividad": tipo_actividad})
         return sql
 
+    # Función para agregar condición de modalidad a la consulta principal
     def add_modalidad_query(self, sql, modalidad):
         sql = sql + " AND rgf.modalidad = :modalidad"
         self.query_params.update({"modalidad": modalidad})
         return sql
 
+    # Función para agregar condición de estado de formación a la consulta principal
     def add_estado_formacion_query(self, sql, estado_formacion):
         sql = sql + " AND rgf.estado_formacion = :estado_formacion"
         self.query_params.update({"estado_formacion": estado_formacion})
         return sql
 
+    # Función para agregar condición de fechas a la consulta principal
     def add_fechas_query(self, sql, fecha_desde, fecha_hasta):
         sql = sql + " AND rgf.fecha_inicio BETWEEN :fecha_desde AND :fecha_hasta"
         self.query_params.update({"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta})
         return sql
 
+    # Función para obtener el limite de para paginar
     def obtener_limit(self, limit: int, position: int):
         offset = (position - 1) * limit
         return offset
+    
+    # Query para obtener los origenes de necesidad
+    def get_origen_necesidad(self):
+
+        try:
+            query = self.db.query(
+                TipoOrigenNecesidadModel
+            ).filter(
+                TipoOrigenNecesidadModel.estado == 1
+            ).all()                 
+
+            # Retornar directamente una lista de diccionarios
+            return [{"id": key.id, "nombre": key.nombre} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para obtener los tipos de evaluación
+    def get_tipo_evaluacion(self):
+
+        try:
+            query = self.db.query(
+                TipoEvaluacionModel
+            ).filter(
+                TipoEvaluacionModel.estado == 1
+            ).all()                 
+
+            # Retornar directamente una lista de diccionarios
+            return [{"id": key.id, "nombre": key.nombre} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para obtener los tipos de evaluación
+    def get_evaluaciones_by_id(self, evaluacion_ids: list):
+
+        try:
+            query = self.db.query(
+                TipoEvaluacionModel.nombre
+            ).filter(
+                TipoEvaluacionModel.id.in_(evaluacion_ids)
+            ).all()
+            
+            return "\n".join([f"- {key.nombre}" for key in query]) if query else ""
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()

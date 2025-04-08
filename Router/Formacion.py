@@ -63,3 +63,10 @@ def consultar_datos(request: Request, db: Session = Depends(get_db)):
     data = getattr(request.state, "json_data", {})
     response = Formacion(db).consultar_datos(data)
     return response
+
+@formacion_router.post('/guardar_calificacion', tags=["Formacion"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def guardar_calificacion(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Formacion(db).guardar_calificacion(data)
+    return response

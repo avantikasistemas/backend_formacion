@@ -347,3 +347,27 @@ class Formacion:
         except Exception as e:
             print(f"Error al obtener información de orden de compra: {e}")
             raise CustomException("Error al obtener información de orden de compra.")
+
+    # Función para guardar las calificaciones de una persona y formacion
+    def guardar_calificacion(self, data: dict):
+
+        try:
+            msg = "Error al guardar notas"
+                        
+            # Buscamos si la formación ya se encuentra finalizada y si es así
+            data_calificacion  = self.querys.buscar_y_actualizar_calificacion(data)
+            if data_calificacion:
+                # Retornamos la información.
+                msg = f"Notas actualizadas exitosamente."
+                return self.tools.output(200, msg)
+            
+            data["created_at"] = datetime.now()
+            data_save = self.querys.guardar_calificacion(data)
+            if data_save:
+                # Retornamos la información.
+                msg = f"Notas guardadas exitosamente."
+                return self.tools.output(200, msg)
+
+        except Exception as e:
+            print(f"Error al guardar notas: {e}")
+            raise CustomException(msg)

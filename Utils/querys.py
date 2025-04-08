@@ -19,6 +19,7 @@ from Models.ciudades_formacion_detalles_model import CiudadesFormacionDetalleMod
 from Models.personal_formacion_detalle_model import PersonalFormacionDetalleModel
 from Models.tipo_origen_necesidad_model import TipoOrigenNecesidadModel
 from Models.tipo_evaluacion_model import TipoEvaluacionModel
+from Models.calificaciones_formacion_model import CalificacionesFormacionModel
 from collections import defaultdict
 import json
 
@@ -710,11 +711,12 @@ class Querys:
                 SELECT nit, nombres 
                 FROM v_personal_activo 
                 WHERE cargo in (
-                                SELECT cargo_y_personal 
-                                FROM macroprocesos_cargos 
-                                WHERE id in (
-                                    SELECT cargo_id FROM cargos_formacion_detalles WHERE formacion_id = :formacion AND estado = 1
-                                ))
+                    SELECT cargo_y_personal 
+                    FROM macroprocesos_cargos 
+                    WHERE id in (
+                        SELECT cargo_id FROM cargos_formacion_detalles WHERE formacion_id = :formacion AND estado = 1
+                    ))
+                ORDER BY nombres
             """
             query = self.db.execute(text(sql), ({"formacion": formacion_id})).fetchall()
 
@@ -778,7 +780,10 @@ class Querys:
             if query:
                 for key in query:
                     cedula = key.nit
-                    response.append(self.get_extra_data_personal(cedula))             
+                    response.append(self.get_extra_data_personal(cedula))
+                    
+                # ✅ Ordenar por nombre
+                response.sort(key=lambda x: x['nombre'])
 
             return response
                 
@@ -928,7 +933,8 @@ class Querys:
             sql = """
                 SELECT COUNT(*) OVER() AS total_registros, rgf.id, rgf.codigo, nf.nombre as nivel_formacion, ta.nombre as tipo_actividad, rgf.tema,
                 mo.nombre as modalidad, ef.nombre as estado_formacion, vpa.nombres as nombre_personal, m.nombre as macroproceso,
-                rgf.fecha_inicio, rgf.fecha_fin, rgf.duracion_horas, rgf.duracion_minutos
+                rgf.fecha_inicio, rgf.fecha_fin, rgf.duracion_horas, rgf.duracion_minutos, vpa.nit as cedula, rgf.evaluacion,
+                cf.nota_eva_escrita, cf.nota_eva_practica, cf.nota_eva_interactiva
                 FROM dbo.registro_general_formacion rgf
                 INNER JOIN tipo_nivel_formacion nf ON nf.id = rgf.nivel_formacion AND nf.estado = 1
                 INNER JOIN tipo_actividad ta ON ta.id = rgf.tipo_actividad AND ta.estado = 1
@@ -937,7 +943,8 @@ class Querys:
                 INNER JOIN personal_formacion_detalle pfd on pfd.formacion_id = rgf.id AND pfd.estado = 1
                 INNER JOIN v_personal_activo vpa on vpa.nit = pfd.nit
                 INNER JOIN macroprocesos_cargos mc on mc.cargo_y_personal = vpa.cargo
-				INNER JOIN macroprocesos m on m.id = mc.macroproceso_id
+                INNER JOIN macroprocesos m on m.id = mc.macroproceso_id
+                LEFT JOIN calificaciones_formacion cf ON cf.formacion_id = rgf.id AND cf.cedula = vpa.nit AND cf.estado = 1
                 WHERE rgf.estado = 1 
             """
 
@@ -982,6 +989,19 @@ class Querys:
                         minutos = key[13]
                     duracion = f"{horas} horas {minutos} minutos"
                     
+                    if not key[16] and not key[17] and not key[18]:
+                        resumen_notas = " - "
+                    else:
+                        resumen_parts = []
+                        if key[16] is not None:
+                            resumen_parts.append(f"ESCRÍTA: {key[16]}")
+                        if key[17] is not None:
+                            resumen_parts.append(f"PRÁCTICA: {key[17]}")
+                        if key[18] is not None:
+                            resumen_parts.append(f"INTERACTIVA: {key[18]}")
+                        
+                        resumen_notas = " | ".join(resumen_parts)
+                    
                     response.append({
                         "id": key[1],
                         "codigo": key[2],
@@ -995,6 +1015,12 @@ class Querys:
                         "fecha_inicio": str(key[10]) if key[10] else '',
                         "fecha_fin": str(key[11]) if key[11] else '',
                         "duracion": duracion,
+                        "cedula": key[14],
+                        "evaluacion": json.loads(key[15]),
+                        "nota_eva_escrita": key[16],
+                        "nota_eva_practica": key[17],
+                        "nota_eva_interactiva": key[18],
+                        "resumen_notas": resumen_notas
                     })
             result = {"registros": response, "cant_registros": cant_registros}
             return result
@@ -1116,6 +1142,43 @@ class Querys:
                 
         except Exception as ex:
             print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para buscar si existen calificaciones y actualizarlas.
+    def buscar_y_actualizar_calificacion(self, data: dict):
+        
+        try:
+            query = self.db.query(
+                CalificacionesFormacionModel
+            ).filter(
+                CalificacionesFormacionModel.formacion_id == data["formacion_id"],
+                CalificacionesFormacionModel.cedula == data["cedula"]
+            ).first()
+            
+            if query:
+                query.nota_eva_escrita = data["nota_eva_escrita"]
+                query.nota_eva_practica = data["nota_eva_practica"]
+                query.nota_eva_interactiva = data["nota_eva_interactiva"]
+                self.db.commit()        
+                return True
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException(str(ex))
+        finally:
+            self.db.close()
+
+    # Query para buscar si existen calificaciones y actualizarlas.
+    def guardar_calificacion(self, data: dict):
+        
+        try:
+            calificacion = CalificacionesFormacionModel(data)
+            self.db.add(calificacion)
+            self.db.commit()
+            return True
+        except Exception as ex:
             raise CustomException(str(ex))
         finally:
             self.db.close()

@@ -285,6 +285,7 @@ class Querys:
                 TipoEstadoFormacionModel.nombre.label('estado_formacion'),
                 RegistroGeneral.fecha_inicio,
                 RegistroGeneral.fecha_fin,
+                RegistroGeneral.created_at,
             ).join(
                 TipoModalidadModel,
                 TipoModalidadModel.id == RegistroGeneral.modalidad
@@ -313,6 +314,7 @@ class Querys:
                         "estado_formacion": key.estado_formacion,
                         "fecha_inicio": str(key.fecha_inicio),
                         "fecha_fin": str(key.fecha_fin),
+                        "fecha_creacion": self.tools.format_date(str(key.created_at), "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"),
                     })
 
             return response

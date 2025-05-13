@@ -387,8 +387,7 @@ class Querys:
                     sql = """
                         SELECT nombres 
                         FROM terceros 
-                        WHERE concepto_1 in (1,3)
-                        AND id = :id
+                        WHERE id = :id
                     """
                     consulta = self.db.execute(text(sql), {"id": response["proveedor"]}).fetchone()
 
@@ -903,6 +902,29 @@ class Querys:
 
             # Retornar directamente una lista de diccionarios
             return [{"cedula": key[0], "nombre": key[1]} for key in query] if query else []
+                
+        except Exception as ex:
+            print(str(ex))
+            raise CustomException("Error al obtener personal.")
+        finally:
+            self.db.close()
+
+    # Query para obtener el personal activo.
+    def get_personal_interno(self, valor):
+
+        try:           
+            
+            sql = """
+                SELECT vpa.nit, vpa.nombres, t.id
+                FROM v_personal_activo  vpa
+                INNER JOIN terceros t ON t.nit = vpa.nit
+                WHERE vpa.nombres LIKE :valor;
+            """
+            query = self.db.execute(text(sql), {"valor": f"%{valor}%"}).fetchall()
+
+            # Retornar directamente una lista de diccionarios
+            # return [{"cedula": key[0], "nombres": key[1]} for key in query] if query else []
+            return [{"id": key.id, "nit": key.nit, "nombres": key.nombres} for key in query] if query else []
                 
         except Exception as ex:
             print(str(ex))

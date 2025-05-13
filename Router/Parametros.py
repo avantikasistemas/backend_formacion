@@ -20,6 +20,13 @@ def get_proveedores(request: Request, db: Session = Depends(get_db)):
     response = Parametros(db).get_proveedores(data)
     return response
 
+@parametros_router.post('/get_personal_interno', tags=["Parametros"], response_model=dict, dependencies=[Depends(JWTBearer())])
+@http_decorator
+def get_personal_interno(request: Request, db: Session = Depends(get_db)):
+    data = getattr(request.state, "json_data", {})
+    response = Parametros(db).get_personal_interno(data)
+    return response
+
 @parametros_router.post('/get_cargos_por_macroproceso', tags=["Parametros"], response_model=dict, dependencies=[Depends(JWTBearer())])
 @http_decorator
 def get_cargos_por_macroproceso(request: Request, db: Session = Depends(get_db)):

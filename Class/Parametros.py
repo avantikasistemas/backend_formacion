@@ -167,3 +167,19 @@ class Parametros:
             print(f"Error al obtener el personal: {e}")
             raise CustomException("Error al obtener el personal.")
 
+    # Función para cargar todo el personal activo
+    def get_personal_interno(self, data: dict):
+
+        try:
+            
+            valor = data["valor"]
+
+            # Acá usamos la query para traer el listado de personal activo.
+            personal = self.querys.get_personal_interno(valor)
+
+            # Retornamos la información.
+            return self.tools.output(200, "Datos encontrados.", personal)
+
+        except Exception as e:
+            print(f"Error al obtener el personal: {e}")
+            raise CustomException("Error al obtener el personal.")

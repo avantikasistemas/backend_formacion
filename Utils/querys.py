@@ -385,13 +385,14 @@ class Querys:
             if response:
                 try:
                     sql = """
-                        SELECT nombres 
+                        SELECT nombres, nit
                         FROM terceros 
                         WHERE id = :id
                     """
                     consulta = self.db.execute(text(sql), {"id": response["proveedor"]}).fetchone()
 
                     response["proveedor_nombre"] = consulta[0] if consulta else ''
+                    response["proveedor_nit"] = consulta[1] if consulta else ''
                     
                     evaluacion_ids = json.loads(response["evaluacion"])
                     evaluaciones = self.get_evaluaciones_by_id(evaluacion_ids)
